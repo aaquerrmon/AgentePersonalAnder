@@ -16,7 +16,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev
 
-COPY *.py ./
+COPY ingest/*.py ./
 
 ENV PYTHONUNBUFFERED=1 \
     HF_HOME=/root/.cache/huggingface \

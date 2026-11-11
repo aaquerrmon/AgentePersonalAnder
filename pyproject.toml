@@ -1,7 +1,7 @@
 [project]
-name = "rag-ingest"
+name = "agente-personal"
 version = "0.1.0"
-description = "Ingesta RAG: docling + embeddings vLLM + PostgreSQL"
+description = "Agente personal: ingesta RAG (docling + embeddings vLLM + PostgreSQL) y código compartido"
 requires-python = ">=3.12,<4"
 dependencies = [
     "docling==2.150.0",

@@ -1,0 +1,12 @@
+# Contexto mínimo para la imagen de ingesta (ver ingest/Dockerfile)
+.git
+.gitignore
+.env
+.env.example
+.venv
+docs
+init
+README.md
+docker-compose.yaml
+.dockerignore
+**/__pycache__
