@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS proyectos (
     tipo VARCHAR(50),
     url_publica VARCHAR(255),
     destacado BOOLEAN DEFAULT FALSE,
-    fecha_realizacion DATE,
     perfil_id INT REFERENCES perfil(id) ON DELETE CASCADE
 );
 
