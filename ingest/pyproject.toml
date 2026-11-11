@@ -1,0 +1,26 @@
+[project]
+name = "rag-ingest"
+version = "0.1.0"
+description = "Ingesta RAG: docling + embeddings vLLM + PostgreSQL"
+requires-python = ">=3.12,<4"
+dependencies = [
+    "docling==2.150.0",
+    "transformers>=4.40,<6",
+    "httpx>=0.28,<1",
+    "psycopg[binary]==3.3.8",
+    "pgvector>=0.3.6,<1",
+    "torch>=2.2.2,<3",
+    "torchvision>=0.20,<1",
+]
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
+
+[tool.uv]
+# Proyecto virtual: solo scripts, no hay paquete que construir
+package = false
