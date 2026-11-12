@@ -42,9 +42,10 @@ Infraestructura **RAG** (Retrieval-Augmented Generation) personal: los documento
 |---|---|---|
 | Base de datos | PostgreSQL 17 + pgvector | `pgvector/pgvector:pg17-bookworm`, índice HNSW (cosine) |
 | Embeddings | vLLM `v0.33.0` | `intfloat/multilingual-e5-small` (384d), API OpenAI en `/v1/embeddings` |
+| LLM | vLLM `v0.33.0` | `Qwen/Qwen3-4B-AWQ` (AWQ), API OpenAI en `/v1/chat/completions`, tool-calling (hermes) + reasoning (qwen3), solo en `127.0.0.1:8080` |
 | Ingesta | docling `2.150.0` | `HybridChunker` con el tokenizer de e5, `max_tokens=450` |
 | Gestión de deps | uv | `pyproject.toml` + `uv.lock` en la raíz (entorno `./.venv` compartido), imagen construida con `uv sync --frozen` |
-| Orquestación | Docker Compose | 4 servicios con healthchecks y dependencias |
+| Orquestación | Docker Compose | 6 servicios con healthchecks y dependencias |
 
 ## Requisitos
 
@@ -166,9 +167,14 @@ Todas se definen en `.env` (copia `.env.example`):
 | `PGADMIN_EMAIL` | — | Email de acceso a pgAdmin |
 | `PGADMIN_PASSWORD` | — | Contraseña de pgAdmin |
 | `PGADMIN_PORT` | `5050` | Puerto expuesto de pgAdmin |
-| `EMBEDDINGS_PORT` | `8000` | Puerto expuesto de vLLM |
+| `EMBEDDINGS_PORT` | `8000` | Puerto expuesto de vLLM (embeddings) |
 | `EMBEDDINGS_MODEL` | `multilingual-e5-small` | Nombre del modelo servido |
-| `VLLM_IMAGE_TAG` | `v0.33.0` | Tag de la imagen `vllm/vllm-openai` |
+| `VLLM_IMAGE_TAG` | `v0.33.0` | Tag de la imagen `vllm/vllm-openai` (compartida por embeddings y LLM) |
+| `LLM_PORT` | `8080` | Puerto expuesto del LLM (en el contenedor escucha siempre el 8080; solo loopback) |
+| `LLM_MODEL` | `Qwen/Qwen3-4B-AWQ` | Modelo HF servido por el LLM |
+| `LLM_SERVED_MODEL_NAME` | `local-llm` | Nombre del modelo en la API (`/v1/models`) |
+| `LLM_GPU_MEMORY_UTILIZATION` | `0.62` | Fracción de VRAM que reserva el LLM (embeddings usa 0.1) |
+| `LLM_MAX_MODEL_LEN` | `4096` | Ventana de contexto máxima del LLM |
 | `MCP_PORT` | `8001` | Puerto expuesto del servidor MCP (en el contenedor escucha siempre el 8001) |
 
 Valores fijados en `docker-compose.yaml` (no suelen tocarse):

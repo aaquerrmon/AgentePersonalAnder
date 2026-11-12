@@ -35,6 +35,51 @@ services:
     networks:
       - agent-net
 
+  # Servidor LLM con vLLM: Qwen3-4B-AWQ, API compatible con OpenAI en /v1/chat/completions
+  llm:
+    image: vllm/vllm-openai:${VLLM_IMAGE_TAG:-v0.33.0}
+    container_name: vllm-llm
+    restart: unless-stopped
+    command:
+      - ${LLM_MODEL:-Qwen/Qwen3-4B-AWQ}
+      - --served-model-name=${LLM_SERVED_MODEL_NAME:-local-llm}
+      - --host=0.0.0.0
+      - --port=8080
+      - --gpu-memory-utilization=${LLM_GPU_MEMORY_UTILIZATION:-0.62}
+      - --max-model-len=${LLM_MAX_MODEL_LEN:-4096}
+      - --max-num-seqs=2
+      - --quantization=awq_marlin
+      - --enable-auto-tool-choice
+      - --tool-call-parser=hermes
+      - --reasoning-parser=qwen3
+    ports:
+      # Solo loopback: el LLM no se expone en la LAN
+      - "127.0.0.1:${LLM_PORT:-8080}:8080"
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    environment:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      VLLM_LOGGING_LEVEL: INFO
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=5)"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 200s
+    networks:
+      - agent-net
+
   # Servidor de embeddings con vLLM: intfloat/multilingual-e5-small (384 dims)
   # Expone la API compatible con OpenAI en /v1/embeddings
   embedding:
