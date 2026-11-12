@@ -167,6 +167,37 @@ services:
         condition: service_healthy
     networks:
       - agent-net
+  
+
+  agent:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: telegram-agent
+    restart: unless-stopped
+
+    env_file:
+      - ./.env
+
+    environment:
+      MCP_URL: http://mcp:8001/mcp
+      POSTGRES_HOST: postgres
+      # vLLM en lugar de OpenAI (el .env apunta a api.openai.com por defecto)
+      OPENAI_BASE_URL: http://llm:8080/v1
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-local}
+      LLM_MODEL: ${LLM_SERVED_MODEL_NAME:-local-llm}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      llm:
+        condition: service_healthy
+      mcp:
+        condition: service_started
+
+    networks:
+      - agent-net
+
 
 volumes:
   postgres_data:

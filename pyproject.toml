@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Agente personal: ingesta RAG (docling + embeddings en CPU + PostgreSQL) y código compartido"
 requires-python = ">=3.12,<4"
 dependencies = [
-    "psycopg[binary]==3.3.8",
+    "psycopg[binary,pool]==3.3.8",
     "pgvector>=0.3.6,<1",
     "mcp>=2.3.0",
 ]
@@ -29,3 +29,11 @@ ingest = [
     "torchvision>=0.20,<1",
 ]
 mcp = ["requests>=2.31,<3", "python-dotenv>=1,<2"]
+agent = [
+    "langchain>=1.0,<2",
+    "langchain-openai>=1.0,<2",
+    "langgraph>=1.0,<3",
+    "langgraph-checkpoint-postgres>=3,<4",
+    "python-telegram-bot>=21,<27",
+    "python-dotenv>=1,<2",
+]
