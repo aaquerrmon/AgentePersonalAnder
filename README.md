@@ -139,6 +139,20 @@ ORDER BY c.embedding <=> '<vector_de_384_dims>'::vector
 LIMIT 5;
 ```
 
+## Servidor MCP
+
+`mcp/server.py` expone dos tools: `postgres_query` (SQL de solo lectura) y
+`rag_search` (embeddings + pgvector). En `docker compose up` corre como servicio
+`mcp` con transporte **streamable-http**:
+
+```bash
+docker compose up -d mcp
+# cliente MCP → http://localhost:8001/mcp
+```
+
+Fuera de Docker sigue siendo stdio por defecto (el cliente lanza el proceso):
+`MCP_TRANSPORT=streamable-http uv run --extra mcp python mcp/server.py`.
+
 ## Variables de entorno
 
 Todas se definen en `.env` (copia `.env.example`):
@@ -155,6 +169,7 @@ Todas se definen en `.env` (copia `.env.example`):
 | `EMBEDDINGS_PORT` | `8000` | Puerto expuesto de vLLM |
 | `EMBEDDINGS_MODEL` | `multilingual-e5-small` | Nombre del modelo servido |
 | `VLLM_IMAGE_TAG` | `v0.33.0` | Tag de la imagen `vllm/vllm-openai` |
+| `MCP_PORT` | `8001` | Puerto expuesto del servidor MCP (en el contenedor escucha siempre el 8001) |
 
 Valores fijados en `docker-compose.yaml` (no suelen tocarse):
 
@@ -173,7 +188,7 @@ AgentePersonal/
 ├── pyproject.toml            # proyecto uv (raíz): dependencias compartidas
 ├── uv.lock                   # lockfile compartido
 ├── .dockerignore             # contexto mínimo para la imagen de ingesta
-├── docker-compose.yaml       # 4 servicios: postgres, pgadmin, embedding, ingest
+├── docker-compose.yaml       # 5 servicios: postgres, pgadmin, embedding, ingest, mcp
 ├── .env.example              # Plantilla de variables de entorno
 ├── docs/                     # Tus documentos (montados en la ingesta)
 │   └── .gitkeep
@@ -181,13 +196,16 @@ AgentePersonal/
 │   ├── 01-init.sql           # extensión pgvector
 │   ├── 02-schema.sql         # esquema (perfil + RAG)
 │   └── 03-seed.sql           # seed de perfil (TRUNCATE + INSERTs)
-└── ingest/                   # Servicio de ingesta (código, no deps)
-    ├── Dockerfile            # python:3.12-slim + uv (contexto = raíz)
-    ├── main.py               # orquestador: scan → sha256 → parse → embed → insert
-    ├── parsing.py            # docling HybridChunker + ruta directa para .txt
-    ├── embeddings.py         # cliente /v1/embeddings (prefijo passage:, reintentos)
-    ├── db.py                 # psycopg3 + pgvector, idempotencia por sha256
-    └── config.py             # configuración desde variables de entorno
+├── ingest/                   # Servicio de ingesta (código, no deps)
+│   ├── Dockerfile            # python:3.12-slim + uv (contexto = raíz)
+│   ├── main.py               # orquestador: scan → sha256 → parse → embed → insert
+│   ├── parsing.py            # docling HybridChunker + ruta directa para .txt
+│   ├── embeddings.py         # cliente /v1/embeddings (prefijo passage:, reintentos)
+│   ├── db.py                 # psycopg3 + pgvector, idempotencia por sha256
+│   └── config.py             # configuración desde variables de entorno
+└── mcp/                      # Servidor MCP (SQL de solo lectura + búsqueda RAG)
+    ├── Dockerfile            # python:3.12-slim + uv, extra `mcp` (sin torch)
+    └── server.py             # tools postgres_query y rag_search (stdio / streamable-http)
 ```
 
 ## Desarrollo local (uv)
@@ -196,7 +214,7 @@ El entorno uv se gestiona **en la raíz** del proyecto, de modo que cualquier
 código del repo (la ingesta u otro módulo futuro) reutiliza el mismo `./.venv`:
 
 ```bash
-uv sync                                  # crea/actualiza ./.venv en la raíz
+uv sync --all-extras                     # crea/actualiza ./.venv en la raíz (extras: ingest, mcp)
 uv add <paquete>                         # añade una dependencia a pyproject.toml + uv.lock
 uv run python ingest/main.py             # ejecuta la ingesta localmente (sin Docker)
 ```

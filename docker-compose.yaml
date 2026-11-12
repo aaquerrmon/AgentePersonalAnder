@@ -74,9 +74,6 @@ services:
     networks:
       - agent-net
 
-  # Ingesta one-shot: convierte los ficheros de ./docs con docling, los trocea
-  # con HybridChunker y los inserta (idempotente por sha256) en documentos_rag
-  # y chunks_rag. Se ejecuta en cada `docker compose up`.
   ingest:
     build:
       context: .
@@ -92,6 +89,32 @@ services:
     volumes:
       - ./docs:/docs:ro
       - hf_cache:/root/.cache/huggingface
+    depends_on:
+      postgres:
+        condition: service_healthy
+      embedding:
+        condition: service_healthy
+    networks:
+      - agent-net
+
+  # Servidor MCP (consulta SQL de solo lectura + búsqueda semántica RAG).
+  # Transporte streamable-http: el cliente MCP se conecta a http://localhost:8001/mcp
+  mcp:
+    build:
+      context: .
+      dockerfile: mcp/Dockerfile
+    container_name: rag-mcp
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      EMBEDDINGS_BASE_URL: http://embedding:8000/v1
+      MCP_TRANSPORT: streamable-http
+      # Puerto interno del servidor: el MCP_PORT de .env es el mapeado en el host
+      MCP_PORT: 8001
+    ports:
+      - "${MCP_PORT:-8001}:8001"
     depends_on:
       postgres:
         condition: service_healthy

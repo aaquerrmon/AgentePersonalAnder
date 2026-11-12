@@ -264,7 +264,16 @@ def rag_search(
 
 if __name__ == "__main__":
 
-    # STDIO: el cliente MCP lanzará este proceso.
-    # No necesita abrir otro puerto HTTP.
+    # stdio: el cliente MCP lanza este proceso (no abre puerto).
+    # streamable-http: servicio de red (docker compose) en el que el
+    # cliente se conecta a http://<host>:<MCP_PORT>/mcp
+    transport = os.getenv("MCP_TRANSPORT", "stdio")
 
-    mcp.run(transport="stdio")
+    if transport == "stdio":
+        mcp.run(transport="stdio")
+    else:
+        mcp.run(
+            transport="streamable-http",
+            host="0.0.0.0",
+            port=int(os.getenv("MCP_PORT", "8001")),
+        )
