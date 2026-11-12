@@ -1,16 +1,15 @@
 [project]
 name = "agente-personal"
 version = "0.1.0"
-description = "Agente personal: ingesta RAG (docling + embeddings vLLM + PostgreSQL) y código compartido"
+description = "Agente personal: ingesta RAG (docling + embeddings en CPU + PostgreSQL) y código compartido"
 requires-python = ">=3.12,<4"
 dependencies = [
-    "docling==2.150.0",
     "transformers>=4.40,<6",
-    "httpx>=0.28,<1",
     "psycopg[binary]==3.3.8",
     "pgvector>=0.3.6,<1",
     "torch>=2.2.2,<3",
     "torchvision>=0.20,<1",
+    "mcp>=2.3.0",
 ]
 [[tool.uv.index]]
 name = "pytorch-cpu"
@@ -24,3 +23,6 @@ torchvision = [{ index = "pytorch-cpu" }]
 [tool.uv]
 # Proyecto virtual: solo scripts, no hay paquete que construir
 package = false
+
+[project.optional-dependencies]
+ingest = ["docling>=2.150.0"]

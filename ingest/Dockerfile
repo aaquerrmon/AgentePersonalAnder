@@ -14,7 +14,7 @@ WORKDIR /app
 
 # Primero solo los ficheros de dependencias, para cachear la capa de instalación
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-install-project --no-dev
+RUN uv sync --frozen --no-install-project --no-dev --extra ingest
 
 COPY ingest/*.py ./
 
