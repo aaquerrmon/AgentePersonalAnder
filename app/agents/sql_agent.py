@@ -9,6 +9,8 @@ Tu misión es responder preguntas sobre datos estructurados.
 
 REGLAS:
 - Utiliza exclusivamente las herramientas SQL disponibles.
+- Consulta solo tablas y columnas que aparezcan en el esquema de abajo.
+- No inventes nombres de tablas ni de columnas.
 - No inventes resultados.
 - Realiza únicamente consultas de lectura.
 - No ejecutes INSERT, UPDATE, DELETE, DROP ni ALTER.
@@ -18,11 +20,19 @@ REGLAS:
 """
 
 
-def build_sql_agent(model, tools):
+def build_sql_agent(model, tools, schema: str = ""):
+
+    prompt = SQL_PROMPT
+
+    if schema:
+        prompt += f"""
+ESQUEMA DE LA BASE DE DATOS:
+{schema}
+"""
 
     return create_agent(
         model=model,
         tools=tools,
-        system_prompt=SQL_PROMPT,
+        system_prompt=prompt,
         name="sql_agent",
     )

@@ -1,5 +1,6 @@
 
 import asyncio
+import logging
 
 from telegram.ext import Application
 
@@ -14,6 +15,15 @@ from app.config import (
 
 from app.agents.supervisor import build_supervisor
 from app.telegram_bot import configure_handlers
+
+# Debe ser anterior a cualquier log (los import anteriores no escriben nada)
+from app.log import setup_logging
+from app.trace import patch_reasoning_stream
+
+setup_logging()
+patch_reasoning_stream()
+
+logger = logging.getLogger("app.main")
 
 
 async def main():
@@ -42,14 +52,14 @@ async def main():
 
         await checkpointer.setup()
 
-        print("Memoria PostgreSQL inicializada")
+        logger.info("Memoria PostgreSQL inicializada")
 
         # Crear supervisor
         agent = await build_supervisor(
             checkpointer=checkpointer
         )
 
-        print("Supervisor inicializado")
+        logger.info("Supervisor inicializado")
 
         # Crear bot Telegram
         application = (
@@ -60,10 +70,11 @@ async def main():
 
         # Compartir agente con los handlers
         application.bot_data["agent"] = agent
+        application.bot_data["checkpointer"] = checkpointer
 
         configure_handlers(application)
 
-        print("Bot Telegram iniciado")
+        logger.info("Bot Telegram iniciado (long polling)")
 
         # Arrancar Telegram mediante long polling
         await application.initialize()

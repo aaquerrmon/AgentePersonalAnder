@@ -123,8 +123,8 @@ def postgres_query(
             "error": "Solo se permiten consultas SELECT o WITH."
         })
 
-    # No permitimos múltiples sentencias
-    if ";" in query:
+    # No permitimos múltiples sentencias (el `;` final sí se admite)
+    if re.search(r";\s*\S", query):
         return json.dumps({
             "error": "No se permiten múltiples sentencias SQL."
         })

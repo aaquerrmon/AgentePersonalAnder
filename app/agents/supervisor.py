@@ -1,13 +1,18 @@
 
+import logging
+
 from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain_openai import ChatOpenAI
+from langchain_core.runnables import RunnableConfig
 
 from app.config import LLM_MODEL, LLM_TEMPERATURE
-from app.mcp_client import get_mcp_tools
+from app.mcp_client import get_mcp_tools, get_database_schema
 
 from app.agents.sql_agent import build_sql_agent
 from app.agents.rag_agent import build_rag_agent
+
+logger = logging.getLogger("app.supervisor")
 
 
 SUPERVISOR_PROMPT = """
@@ -25,12 +30,17 @@ Tienes dos especialistas:
 
 INSTRUCCIONES:
 
-- Analiza cada pregunta.
-- Delega en SQL cuando necesites datos estructurados.
-- Delega en RAG cuando necesites información documental.
+- NUNCA respondas desde tu memoria ni repitas respuestas
+  anteriores del historial: toda pregunta sobre datos se
+  delega SIEMPRE, aunque creas saber la respuesta.
+- Delega en SQL todo sobre personas o datos estructurados:
+  perfil, idiomas, experiencia, proyectos, tecnologías,
+  educación, recuentos, estadísticas.
+- Delega en RAG todo sobre documentos, manuales,
+  informes y procedimientos.
 - Puedes utilizar ambos agentes para una misma pregunta.
-- Si necesitas ambos, intenta obtener los resultados
-  de ambos especialistas.
+- Si un agente devuelve error o "no encontrado",
+  reintenta con otra formulación antes de responder.
 - No inventes resultados.
 - Combina las respuestas y explica las fuentes.
 - Mantén el contexto de la conversación.
@@ -41,9 +51,14 @@ INSTRUCCIONES:
 
 async def build_supervisor(checkpointer=None):
 
+    # streaming=True: sin esto langchain solo emite on_llm_new_token
+    # en astream, y aquí los agentes se invocan con ainvoke.
     model = ChatOpenAI(
         model=LLM_MODEL,
         temperature=LLM_TEMPERATURE,
+        streaming=True,
+        # incluye usage en el último chunk (vLLM soporta stream_options)
+        stream_usage=True,
     )
 
     # Recuperar herramientas MCP
@@ -75,33 +90,54 @@ async def build_supervisor(checkpointer=None):
             f"RAG: {[t.name for t in rag_tools]}."
         )
 
+    # Esquema de la BD para el agente SQL: sin él el modelo improvisa
+    # nombres de tablas. Si falla, se arranca sin esquema (no se bloquea).
+    try:
+        schema = await get_database_schema()
+        logger.info("Esquema de la BD:\n%s", schema)
+    except Exception as e:
+        logger.warning("No se pudo obtener el esquema de la BD: %s", e)
+        schema = ""
+
     # Crear los especialistas
-    sql_agent = build_sql_agent(model, sql_tools)
+    sql_agent = build_sql_agent(model, sql_tools, schema)
     rag_agent = build_rag_agent(model, rag_tools)
 
-    # Herramienta de delegación SQL
+    # Herramienta de delegación SQL.
+    # config se inyecta (RunnableConfig no va en el esquema de la tool) y es lo
+    # que hace que los callbacks/línea de tracing bajen hasta el sub-agente.
     @tool
-    async def consultar_base_datos(pregunta: str) -> str:
+    async def consultar_base_datos(
+        pregunta: str, config: RunnableConfig
+    ) -> str:
         """Consulta información estructurada en PostgreSQL."""
 
-        result = await sql_agent.ainvoke({
-            "messages": [
-                {"role": "user", "content": pregunta}
-            ]
-        })
+        result = await sql_agent.ainvoke(
+            {
+                "messages": [
+                    {"role": "user", "content": pregunta}
+                ]
+            },
+            config=config,
+        )
 
         return str(result["messages"][-1].content)
 
     # Herramienta de delegación RAG
     @tool
-    async def buscar_documentacion(pregunta: str) -> str:
+    async def buscar_documentacion(
+        pregunta: str, config: RunnableConfig
+    ) -> str:
         """Busca información en documentos mediante RAG."""
 
-        result = await rag_agent.ainvoke({
-            "messages": [
-                {"role": "user", "content": pregunta}
-            ]
-        })
+        result = await rag_agent.ainvoke(
+            {
+                "messages": [
+                    {"role": "user", "content": pregunta}
+                ]
+            },
+            config=config,
+        )
 
         return str(result["messages"][-1].content)
 
