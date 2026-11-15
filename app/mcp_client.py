@@ -79,33 +79,6 @@ async def _call_tool(name: str, arguments: dict) -> str:
     return text
 
 
-_SCHEMA_SQL = """
-SELECT table_name,
-       string_agg(column_name || ' ' || data_type, ', '
-                  ORDER BY ordinal_position) AS columnas
-FROM information_schema.columns
-WHERE table_schema = 'public'
-GROUP BY table_name
-ORDER BY table_name
-"""
-
-
-async def get_database_schema() -> str:
-    """Tablas y columnas visibles para el usuario RO, formateadas para
-    inyectarlas en el prompt del agente SQL (una sola petición MCP)."""
-
-    raw = await _call_tool("postgres_query", {"query": _SCHEMA_SQL})
-    data = json.loads(raw)
-
-    if data.get("error"):
-        raise RuntimeError(f"Error consultando el esquema: {data['error']}")
-
-    return "\n".join(
-        f"- {row['table_name']}: {row['columnas']}"
-        for row in data.get("rows", [])
-    )
-
-
 async def get_mcp_tools():
 
     async with streamable_http_client(MCP_URL) as (read, write):

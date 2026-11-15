@@ -1,7 +1,7 @@
 [project]
 name = "agente-personal"
 version = "0.1.0"
-description = "Agente personal: ingesta RAG (docling + embeddings en CPU + PostgreSQL) y código compartido"
+description = "Agente personal: ingesta RAG (docling + embeddings + PostgreSQL), servidor MCP y bot de agentes en Telegram"
 requires-python = ">=3.12,<4"
 dependencies = [
     "psycopg[binary,pool]==3.3.8",

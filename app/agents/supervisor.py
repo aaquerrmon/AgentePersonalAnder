@@ -1,21 +1,17 @@
 
-import logging
-
 from langchain.agents import create_agent
 from langchain.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableConfig
 
-from app.config import LLM_MODEL, LLM_TEMPERATURE
-from app.mcp_client import get_mcp_tools, get_database_schema
+from app.config import LLM_MODEL, LLM_TEMPERATURE, IDENTIDAD
+from app.mcp_client import get_mcp_tools
 
 from app.agents.sql_agent import build_sql_agent
 from app.agents.rag_agent import build_rag_agent
 
-logger = logging.getLogger("app.supervisor")
 
-
-SUPERVISOR_PROMPT = """
+SUPERVISOR_PROMPT = IDENTIDAD + """
 Eres el supervisor de un asistente inteligente.
 
 Tienes dos especialistas:
@@ -90,17 +86,11 @@ async def build_supervisor(checkpointer=None):
             f"RAG: {[t.name for t in rag_tools]}."
         )
 
-    # Esquema de la BD para el agente SQL: sin él el modelo improvisa
-    # nombres de tablas. Si falla, se arranca sin esquema (no se bloquea).
-    try:
-        schema = await get_database_schema()
-        logger.info("Esquema de la BD:\n%s", schema)
-    except Exception as e:
-        logger.warning("No se pudo obtener el esquema de la BD: %s", e)
-        schema = ""
+    # Esquema fijo en sql_agent.SCHEMA_SQL: sin Postgres/MCP no se puede
+    # consultar al arrancar, y en ese caso el modelo improvisa tablas.
 
     # Crear los especialistas
-    sql_agent = build_sql_agent(model, sql_tools, schema)
+    sql_agent = build_sql_agent(model, sql_tools)
     rag_agent = build_rag_agent(model, rag_tools)
 
     # Herramienta de delegación SQL.

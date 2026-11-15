@@ -1,8 +1,10 @@
 
 from langchain.agents import create_agent
 
+from app.config import IDENTIDAD
 
-RAG_PROMPT = """
+
+RAG_PROMPT = IDENTIDAD + """
 Eres un especialista en recuperación documental RAG.
 
 Tu misión es responder preguntas utilizando documentos
